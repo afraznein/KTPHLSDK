@@ -71,7 +71,7 @@ void ClientCvarChanged(const edict_t *pEdict, const char *cvar, const char *valu
 This SDK fork is part of the KTP stack that enables real-time client monitoring:
 
 **🔧 SDK Layer:**
-- **[hlsdk](https://github.com/afraznein/hlsdk)** - This project (Modified SDK headers)
+- **[KTPHLSDK](https://github.com/afraznein/KTPHLSDK)** - This project (Modified SDK headers)
 
 **🎮 Engine Layer:**
 - **[KTP-ReHLDS](https://github.com/afraznein/KTPReHLDS)** - Modified Half-Life engine implementing pfnClientCvarChanged
@@ -159,7 +159,7 @@ This is a **header-only SDK** - no compilation needed. Simply include the header
 **For mods:**
 ```bash
 # Clone the SDK
-git clone https://github.com/afraznein/hlsdk.git
+git clone https://github.com/afraznein/KTPHLSDK.git
 
 # Include in your project
 # Add hlsdk/engine/ to your include path
@@ -168,7 +168,7 @@ git clone https://github.com/afraznein/hlsdk.git
 **For engines (like KTP-ReHLDS):**
 ```bash
 # Clone as submodule or dependency
-git submodule add https://github.com/afraznein/hlsdk.git hlsdk
+git submodule add https://github.com/afraznein/KTPHLSDK.git hlsdk
 
 # Reference in your CMakeLists.txt or Makefile
 include_directories(hlsdk/engine)
@@ -180,7 +180,8 @@ include_directories(hlsdk/engine)
 
 ### KTP Modifications
 
-- **2024-XX-XX** - Added `pfnClientCvarChanged` callback to `NEW_DLL_FUNCTIONS`
+- **2025-11-27** - Added `pfnClientCvarChanged` callback to `NEW_DLL_FUNCTIONS`
+- **2025-11-28** - Added comprehensive documentation
 - **Base Version** - Forked from Half-Life 1 SDK by Valve
 
 ### Upstream SDK
@@ -223,7 +224,7 @@ See [LICENSE](LICENSE) file for complete license text.
 
 ## 🔗 Links
 
-- **GitHub**: https://github.com/afraznein/hlsdk
+- **GitHub**: https://github.com/afraznein/KTPHLSDK
 - **KTP Infrastructure**: https://github.com/afraznein
 - **Upstream HL1 SDK**: https://github.com/ValveSoftware/halflife
 - **Valve Developer Community**: https://developer.valvesoftware.com/
