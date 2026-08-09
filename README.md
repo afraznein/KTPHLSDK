@@ -20,7 +20,9 @@ void (*pfnClientCvarChanged)(const edict_t *pEnt, const char *cvarName, const ch
 
 This enables KTP-ReHLDS to notify KTPAMXX (running as a ReHLDS extension) when clients respond to cvar queries. KTPAMXX fires the `client_cvar_changed` forward to plugins like KTPCvarChecker for real-time anti-cheat enforcement.
 
-**Key difference from existing `pfnCvarValue2`:** `pfnCvarValue2` is a response to explicit `query_client_cvar` calls. `pfnClientCvarChanged` fires for ANY cvar change detected by the engine, providing continuous monitoring.
+**Key difference from existing `pfnCvarValue2`:** `pfnCvarValue2` is delivered only to the caller that issued a `query_client_cvar`. `pfnClientCvarChanged` fires for **every** cvar-query response the engine receives, including responses to queries the engine issued itself — so a consumer sees results without owning the query.
+
+⚠️ It is **not** continuous change detection. A cvar is reported only when something queried it; a client can change a cvar between queries and nothing fires. Enforcement still depends on a query cadence — the callback removes the need for a *plugin* to poll, not the need to ask.
 
 ---
 

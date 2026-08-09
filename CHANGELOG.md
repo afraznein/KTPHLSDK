@@ -11,7 +11,7 @@ This project is a fork of the Valve Half-Life 1 SDK with KTP-specific modificati
 #### Added
 - `pfnClientCvarChanged` callback to `NEW_DLL_FUNCTIONS` structure in `engine/eiface.h`
 - Enables engine implementations (like KTP-ReHLDS) to notify game DLLs when clients respond to cvar queries
-- Required for real-time client cvar monitoring without polling
+- Lets a game DLL observe cvar-query responses it did not itself request (no plugin-side polling); still query-driven, so it is not continuous change detection
 
 #### Documentation
 - Added comprehensive README with usage examples (2025-11-28)

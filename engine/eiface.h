@@ -524,8 +524,9 @@ typedef struct
 
 	// KTP Custom: Real-time client cvar change notification
 	// Called whenever a client cvar query response is received from the client
-	// This provides real-time notification for ALL client cvars (not just FCVAR_USERINFO)
-	// Use this to implement real-time cvar validation/enforcement without periodic polling
+	// Covers ALL client cvars (not just FCVAR_USERINFO), and delivers responses to
+	// queries this consumer did not issue. NOT continuous change detection: nothing
+	// fires for a cvar nobody queried, so enforcement still needs a query cadence.
 	// Parameters: pEnt - player entity, cvarName - name of cvar, value - current value
 	void			(*pfnClientCvarChanged)( const edict_t *pEnt, const char *cvarName, const char *value );
 } NEW_DLL_FUNCTIONS;

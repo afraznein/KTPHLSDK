@@ -6,7 +6,7 @@
 Modified Half-Life 1 SDK headers with `pfnClientCvarChanged` callback. This is a **header-only dependency** — no compilation needed. Used at build time by KTPAMXX and KTP-ReHLDS.
 
 ## KTP Modification
-Single addition to `engine/eiface.h`: `pfnClientCvarChanged` callback in `NEW_DLL_FUNCTIONS` struct (line 525-530). Enables real-time client cvar change detection without polling.
+Single addition to `engine/eiface.h`: `pfnClientCvarChanged` callback in `NEW_DLL_FUNCTIONS` struct (line 525-530). Delivers every client cvar-query response to the game DLL, including responses to queries it did not issue — so no plugin-side polling. Still query-driven, not continuous change detection.
 
 ## Project Structure
 - `engine/eiface.h` - **The only modified file** (pfnClientCvarChanged added)
