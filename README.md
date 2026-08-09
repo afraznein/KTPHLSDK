@@ -1,6 +1,6 @@
 # KTP Half-Life SDK
 
-**Version 1.0.0** | Modified Half-Life 1 SDK headers with `pfnClientCvarChanged` callback
+**Version 1.0.1** | Modified Half-Life 1 SDK headers with `pfnClientCvarChanged` callback
 
 A fork of the [Half-Life 1 SDK](https://github.com/ValveSoftware/halflife) that adds a single callback to `NEW_DLL_FUNCTIONS`, enabling real-time client cvar change detection. Used as a build-time dependency by [KTPAMXX](https://github.com/afraznein/KTPAMXX) and [KTP-ReHLDS](https://github.com/afraznein/KTPReHLDS).
 
