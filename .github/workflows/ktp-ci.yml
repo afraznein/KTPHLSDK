@@ -1,0 +1,129 @@
+# KTP CI — consumer build gate for a header-only SDK.
+#
+# This repo has no build of its own, so the only honest way to prove a header
+# change still builds is to build the thing that consumes it. KTPAMXX's own CI
+# already checks this SDK out at its DEFAULT branch and compiles against it —
+# which means a broken header here is discovered on someone else's PR, after it
+# has landed. This runs the same build on the change instead.
+#
+# Deliberately one job. A syntax-only sweep over the headers would pass on an
+# ABI change (a reordered or removed NEW_DLL_FUNCTIONS member still compiles),
+# so it would buy a green tick and no coverage.
+#
+# ⚠️ NOT `paths:`-filtered, on purpose. This is meant to be a required status
+# check, and a filtered workflow is silently skipped on an unrelated PR: the
+# check never reports and the branch cannot be merged.
+
+name: KTP CI
+
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+  workflow_dispatch:
+    inputs:
+      ktpamxx_ref:
+        description: 'KTPAMXX ref to build. Blank = the same-named branch if it exists, else its default branch.'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  consumer-build:
+    name: KTPAMXX builds against this SDK
+    # 22.04 (GLIBC 2.35) matches KTPAMXX's own CI floor. Nothing is shipped from
+    # here; keeping the toolchain identical is what makes a failure meaningful.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout KTPHLSDK
+        uses: actions/checkout@v6
+        with:
+          path: KTPhlsdk
+
+      # Checking the consumer out with no ref reads its default branch, so a
+      # coordinated header change on feature branches in both repos fails on both
+      # sides until one merges. Prefer a same-named branch; else the default.
+      - name: Resolve KTPAMXX ref
+        id: consumer
+        env:
+          CONSUMER: https://github.com/afraznein/KTPAMXX.git
+          OVERRIDE: ${{ inputs.ktpamxx_ref }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ -n "$OVERRIDE" ]; then
+            REF="$OVERRIDE"
+            echo "dispatch override: $REF"
+          elif [ -n "$BRANCH" ] && git ls-remote --exit-code --heads "$CONSUMER" "refs/heads/$BRANCH" >/dev/null 2>&1; then
+            REF="$BRANCH"
+            echo "matched same-named branch on KTPAMXX: $REF"
+          else
+            REF=$(git ls-remote --symref "$CONSUMER" HEAD | awk '/^ref:/ { sub("refs/heads/", "", $2); print $2; exit }')
+            echo "no matching branch on KTPAMXX; using its default branch: $REF"
+          fi
+          # An empty ref makes checkout silently take the default branch, so a
+          # probe that died would read as a passing build of the wrong thing.
+          test -n "$REF" || { echo "::error::could not resolve a KTPAMXX ref to build"; exit 1; }
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout KTPAMXX
+        uses: actions/checkout@v6
+        with:
+          repository: afraznein/KTPAMXX
+          ref: ${{ steps.consumer.outputs.ref }}
+          submodules: recursive
+          path: KTPAMXX
+
+      - name: Clone AMBuild
+        run: git clone --depth=1 https://github.com/alliedmodders/ambuild.git ambuild
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.9'
+
+      - name: Install 32-bit toolchain
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-9 g++-9 gcc-9-multilib g++-9-multilib \
+            gcc-multilib g++-multilib libstdc++6 lib32stdc++6 \
+            libc6-dev libc6-dev-i386 linux-libc-dev \
+            linux-libc-dev:i386 lib32z1-dev nasm
+
+      - name: Install AMBuild
+        run: |
+          python3 -m pip install --upgrade pip setuptools wheel
+          python3 -m pip install ./ambuild
+
+      - name: Configure KTPAMXX against this checkout
+        working-directory: KTPAMXX
+        env:
+          CC: gcc-9
+          CXX: g++-9
+        run: |
+          python3 configure.py \
+            --enable-optimize \
+            --no-mysql \
+            --no-plugins \
+            --hlsdk=../KTPhlsdk
+
+      - name: Build
+        working-directory: KTPAMXX/obj-linux
+        run: ambuild
+
+      - name: Verify artifacts
+        working-directory: KTPAMXX
+        run: |
+          set -e
+          AMXX=obj-linux/packages/base/addons/ktpamx/dlls/ktpamx_i386.so
+          DODX=obj-linux/packages/dod/addons/ktpamx/modules/dodx_ktp_i386.so
+          test -f "$AMXX" || { echo "::error::MISSING: $AMXX"; exit 1; }
+          test -f "$DODX" || { echo "::error::MISSING: $DODX"; exit 1; }
+          file "$AMXX" "$DODX"
