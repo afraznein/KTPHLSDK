@@ -6,9 +6,12 @@
 # which means a broken header here is discovered on someone else's PR, after it
 # has landed. This runs the same build on the change instead.
 #
-# Deliberately one job. A syntax-only sweep over the headers would pass on an
-# ABI change (a reordered or removed NEW_DLL_FUNCTIONS member still compiles),
-# so it would buy a green tick and no coverage.
+# Two jobs, each covering what the other cannot. The consumer build proves a
+# header change still compiles, but a reordered or removed NEW_DLL_FUNCTIONS
+# member still compiles on both sides and shifts every later slot at runtime --
+# so the append-only contract gets its own structural gate, which self-tests
+# that it can fail before it judges anything. A syntax-only sweep would add
+# nothing to either.
 #
 # ⚠️ NOT `paths:`-filtered, on purpose. This is meant to be a required status
 # check, and a filtered workflow is silently skipped on an unrelated PR: the
@@ -33,6 +36,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  abi-append-only:
+    name: NEW_DLL_FUNCTIONS append-only
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # A gate that cannot fail is worse than no gate: prove it rejects
+      # removal, reorder and mid-insertion before letting it judge anything.
+      - name: Selftest the gate
+        run: python3 scripts/check_abi_append_only.py --selftest
+
+      - name: Compare against the base
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "pull_request" ]; then
+            BASE="$PR_BASE"
+          elif [ "$EVENT" = "push" ] && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            BASE="$PUSH_BEFORE"
+          else
+            echo "no base to compare on $EVENT; contract not evaluated"
+            exit 0
+          fi
+          # A force-push can make `before` unreachable; only push events may
+          # soft-skip on that. A PR base must resolve or the job fails --
+          # otherwise an unfetchable base would read as a passing check.
+          if ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            if [ "$EVENT" = "push" ]; then
+              echo "::warning::base $BASE unreachable (force-push?); contract not evaluated"
+              exit 0
+            fi
+            echo "::error::PR base $BASE not present after full-depth checkout"
+            exit 1
+          fi
+          git show "$BASE:engine/eiface.h" > /tmp/eiface_base.h
+          python3 scripts/check_abi_append_only.py /tmp/eiface_base.h engine/eiface.h
+
   consumer-build:
     name: KTPAMXX builds against this SDK
     # 22.04 (GLIBC 2.35) matches KTPAMXX's own CI floor. Nothing is shipped from
