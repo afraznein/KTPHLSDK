@@ -2,6 +2,9 @@
 
 **REQUIRED: Before modifying any header in this repo, invoke the `cpp-dev` skill** (`.claude/skills/cpp-dev/SKILL.md`). It carries the ABI append-only contract, the pfnClientCvarChanged trigger-scope fact, and the coordinated-bump workflow with consumers; do not edit source without it loaded.
 
+**A design that ships as a document is NOT done** — every proposal in a docs-only PR becomes a
+tracked board item in the same act (operator ruling 2026-09-14). See `DESIGN_DOCS_ARE_NOT_DONE.md`.
+
 ## Purpose
 Modified Half-Life 1 SDK headers with `pfnClientCvarChanged` callback. This is a **header-only dependency** — no compilation needed. Used at build time by KTPAMXX and KTP-ReHLDS.
 
